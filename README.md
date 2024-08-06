@@ -10,7 +10,7 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 1. Python Environment - run Python 3.6+ applications and install Python dependencies via `pip`
 2. Docker CLI - build and run Docker images locally
 3. `kubectl` - run commands against a Kubernetes cluster
-4. `helm` - apply Helm Charts to a Kubernetes cluster
+4. `helm` - apply Helm Charts to a Kubernetes cluster ( you can yaml to deploy)
 
 #### Remote Resources
 1. AWS CodeBuild - build Docker images remotely
@@ -21,21 +21,12 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 
 ### Setup
 #### 1. Configure a Database
-Set up a Postgres database using a Helm Chart.
+Set up a Postgres database
 
-1. Set up Bitnami Repo
-```bash
-helm repo add <REPO_NAME> https://charts.bitnami.com/bitnami
-```
+1. Setup Database using Kubernetes PV, PVC, deployment and create service.
+2. This should set up a Postgre deployment at `<SERVICE_NAME>-postgresql.default.svc.cluster.local` in your Kubernetes cluster. You can verify it by running `kubectl svc`
 
-2. Install PostgreSQL Helm Chart
-```
-helm install <SERVICE_NAME> <REPO_NAME>/postgresql
-```
-
-This should set up a Postgre deployment at `<SERVICE_NAME>-postgresql.default.svc.cluster.local` in your Kubernetes cluster. You can verify it by running `kubectl svc`
-
-By default, it will create a username `postgres`. The password can be retrieved with the following command:
+By default, it will create a username `db`. The password can be retrieved with the following command:
 ```bash
 export POSTGRES_PASSWORD=$(kubectl get secret --namespace default <SERVICE_NAME>-postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
 
