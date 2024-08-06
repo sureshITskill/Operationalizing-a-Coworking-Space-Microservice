@@ -9,7 +9,7 @@ WORKDIR /src
 CMD apt update -y
 
 # Copy the requirements.txt file  to install requried Python packages.
-COPY requirements.txt .
+COPY /analytics/requirements.txt /src
 
 # Install packages and upgrade the flask. 
 RUN pip install --upgrade pip && pip install -r requirements.txt && pip install --upgrade Flask Werkzeug
