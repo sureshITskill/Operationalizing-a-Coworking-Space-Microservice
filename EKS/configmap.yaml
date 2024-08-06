@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sureshdatabase-db-configmap
+data:
+  DB_USERNAME: "dbuser"
+  DB_NAME: "sureshdatabase"
+  DB_HOST: "10.100.153.79"
+  DB_PORT: "5432"
