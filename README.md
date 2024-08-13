@@ -132,7 +132,7 @@ d) post-build: Push the image to your Amazon ECR account with docker push
 As a final verification, you may execute the same CURL commands above but change the BASE_URL to the External-IP obtained from this command's output:
 ```bash
 kubectl get svc
-'''
+```
 #### 9. Setup CloudWatch Logging
 1. set up CloudWatch logging. In particular, we are going to use its Container Insights feature.
 
