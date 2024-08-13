@@ -10,7 +10,7 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 1. Python Environment - run Python 3.6+ applications and install Python dependencies via `pip`
 2. Docker CLI - build and run Docker images locally
 3. `kubectl` - run commands against a Kubernetes cluster
-4. `helm` - apply Helm Charts to a Kubernetes cluster
+4. `helm` - apply Helm Charts to a Kubernetes cluster ( you can yaml to deploy)
 
 #### Remote Resources
 1. AWS CodeBuild - build Docker images remotely
@@ -20,36 +20,28 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 5. GitHub - pull and clone code
 
 ### Setup
-#### 1. Configure a Database
-Set up a Postgres database using a Helm Chart.
 
-1. Set up Bitnami Repo
-```bash
-helm repo add <REPO_NAME> https://charts.bitnami.com/bitnami
-```
+#### 1. Create EKS Cluster, PVC and PV EKS Cluster name: suresh-eks-udacity
+Create the EKS Kubernestes cluster using below command:
+1. eksctl create cluster --name suresh-eks-udacity --region us-east-1 --nodegroup-name my-nodes --node-type t3.small --nodes 1 --nodes-min 1 --nodes-max 2
+2. Create the persistant volume and persistant volume claim. 
 
-2. Install PostgreSQL Helm Chart
-```
-helm install <SERVICE_NAME> <REPO_NAME>/postgresql
-```
+#### 2. Configure a Database 
+Set up a Postgres database - name: sureshdatabase
 
-This should set up a Postgre deployment at `<SERVICE_NAME>-postgresql.default.svc.cluster.local` in your Kubernetes cluster. You can verify it by running `kubectl svc`
+1. Setup Database using Kubernetes PV, PVC, deployment and create service. The kubernetes yaml files are available under EKS directory.
+2. Based on the username and password set in the deployement connect with the database using bash into the pod. 
+3.postgresql-service that targets pods with the label app.kubernetes.io/name=postgresql on port 5432, which is the default port for PostgreSQL. Use the posegresql-service.yaml file in the EKS directory.  You can verify it by running `kubectl svc`
+Setup the port fowarding using the command kubectl port-forward service/postgresql-service 5433:5432 & to connect the database locally. 
 
-By default, it will create a username `postgres`. The password can be retrieved with the following command:
-```bash
-export POSTGRES_PASSWORD=$(kubectl get secret --namespace default <SERVICE_NAME>-postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
 
-echo $POSTGRES_PASSWORD
-```
 
-<sup><sub>* The instructions are adapted from [Bitnami's PostgreSQL Helm Chart](https://artifacthub.io/packages/helm/bitnami/postgresql).</sub></sup>
-
-3. Test Database Connection
+#### 3. Test Database Connection
 The database is accessible within the cluster. This means that when you will have some issues connecting to it via your local environment. You can either connect to a pod that has access to the cluster _or_ connect remotely via [`Port Forwarding`](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
 
 * Connecting Via Port Forwarding
 ```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
+    kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
     PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432
 ```
 
@@ -59,24 +51,34 @@ kubectl exec -it <POD_NAME> bash
 PGPASSWORD="<PASSWORD HERE>" psql postgres://postgres@<SERVICE_NAME>:5432/postgres -c <COMMAND_HERE>
 ```
 
-4. Run Seed Files
+#### 4. Run Seed Files to insert sample data provided. 
 We will need to run the seed files in `db/` in order to create the tables and populate them with data.
 
 ```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
-    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432 < <FILE_NAME.sql>
+    kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 1_create_tables.sql
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 2_seed_users.sql
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 3_seed_tokens.sql
 ```
 
-### 2. Running the Analytics Application Locally
+#### 5. Running the Analytics Application Locally
 In the `analytics/` directory:
 
 1. Install dependencies
 ```bash
+apt update
+apt install build-essential libpq-dev
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 2. Run the application (see below regarding environment variables)
 ```bash
-<ENV_VARS> python app.py
+    export DB_USERNAME=dbuser
+    export DB_PASSWORD=${POSTGRES_PASSWORD}
+    export DB_HOST=127.0.0.1
+    export DB_PORT=5433
+    export DB_NAME=sureshdatabase
+    python app.py
 ```
 
 There are multiple ways to set environment variables in a command. They can be set per session by running `export KEY=VAL` in the command line or they can be prepended into your command.
@@ -99,6 +101,40 @@ The benefit here is that it's explicitly set. However, note that the `DB_PASSWOR
 
 * Generate report for check-ins grouped by users
 `curl <BASE_URL>/api/reports/user_visits`
+In this case, since the code is run directly on the local computer rather than through Docker, the BASE_URL is 127.0.0.1:5153. The port 5153 is specified in the app.py script.
+
+#### 6. Deploy the Analytics Application (Dockerize the Application)
+1. create docker file called Dockerfile in the main directory and ensure to include dependencies, image to build, pip requirements installation.
+2. build and verify the Docker image, run the following command:
+ ```bash
+docker build -t test-coworking-analytics .
+docker run --network="host" test-coworking-analytics
+```
+3. You may use the curl commands mentioned in the Build the Analytics Application Locally page to test your Dockerized app. When correct, you should get the same output as then.
+
+
+#### 7. Set up Continuous Integration with CodeBuild
+The purpose of this step is to provide a systematic approach to pushing the Docker image of the coworking application into Amazon ECR.
+1. First, create an Amazon ECR repository on your AWS console. name: coworking-repo
+2. Then, create an Amazon CodeBuild project that is connected to your project's GitHub repository. name: coworking
+3.  create a buildspec.yaml file that will be triggered whenever the project repository is updated. The buildspec.yaml file is available in the main directory.
+a) pre-build: Set up Docker login with aws ecr get-login-password
+build:
+b) Build the coworking analytics application using docker build
+c) Tag the image with the docker tag command. Automate this process by using the $CODEBUILD_BUILD_NUMBER variable (rather than entering the image tags manually)
+d) post-build: Push the image to your Amazon ECR account with docker push
+4. Verify the build successful and create the image.
+
+#### 8. Build the application with updated image in the ECR
+1. The configmap, deployment and secret yaml files are available in EKS directory. using Kubectl commands, create the configmap, deployment and secret (store DB password)
+2. Using the image which is build using the codebuild and stored in the ECR in the deployment.yaml file.
+3. verify the Deployment
+As a final verification, you may execute the same CURL commands above but change the BASE_URL to the External-IP obtained from this command's output:
+```bash
+kubectl get svc
+```
+#### 9. Setup CloudWatch Logging
+1. set up CloudWatch logging. In particular, we are going to use its Container Insights feature.
 
 ## Project Instructions
 1. Set up a Postgres database with a Helm Chart
