@@ -101,7 +101,7 @@ The benefit here is that it's explicitly set. However, note that the `DB_PASSWOR
 
 * Generate report for check-ins grouped by users
 `curl <BASE_URL>/api/reports/user_visits`
-In this case, since the code is run directly on the local computer rather than through Docker, the BASE_URL is 127.0.0.1:5153. The port 5153 is specified in the app.py script.
+In this case, since the code is run directly on the local computer rather than through Docker, the BASE_URL is 127.0.0.1:5153. The port 5153 is specified in the app.py script..
 
 #### 6. Deploy the Analytics Application (Dockerize the Application)
 1. create docker file called Dockerfile in the main directory and ensure to include dependencies, image to build, pip requirements installation.
