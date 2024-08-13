@@ -21,7 +21,7 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 
 ### Setup
 
-#### 1. Create EKS Cluster, PVC and PV
+#### 1. Create EKS Cluster, PVC and PV EKS Cluster name: suresh-eks-udacity
 Create the EKS Kubernestes cluster using below command:
 1. eksctl create cluster --name suresh-eks-udacity --region us-east-1 --nodegroup-name my-nodes --node-type t3.small --nodes 1 --nodes-min 1 --nodes-max 2
 2. Create the persistant volume and persistant volume claim. 
@@ -41,7 +41,7 @@ The database is accessible within the cluster. This means that when you will hav
 
 * Connecting Via Port Forwarding
 ```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
+    kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
     PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432
 ```
 
@@ -55,7 +55,7 @@ PGPASSWORD="<PASSWORD HERE>" psql postgres://postgres@<SERVICE_NAME>:5432/postgr
 We will need to run the seed files in `db/` in order to create the tables and populate them with data.
 
 ```bash
-kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
+    kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
     PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 1_create_tables.sql
     PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 2_seed_users.sql
     PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 3_seed_tokens.sql
@@ -66,11 +66,19 @@ In the `analytics/` directory:
 
 1. Install dependencies
 ```bash
+apt update
+apt install build-essential libpq-dev
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 2. Run the application (see below regarding environment variables)
 ```bash
-<ENV_VARS> python app.py
+    export DB_USERNAME=dbuser
+    export DB_PASSWORD=${POSTGRES_PASSWORD}
+    export DB_HOST=127.0.0.1
+    export DB_PORT=5433
+    export DB_NAME=sureshdatabase
+    python app.py
 ```
 
 There are multiple ways to set environment variables in a command. They can be set per session by running `export KEY=VAL` in the command line or they can be prepended into your command.
@@ -93,6 +101,10 @@ The benefit here is that it's explicitly set. However, note that the `DB_PASSWOR
 
 * Generate report for check-ins grouped by users
 `curl <BASE_URL>/api/reports/user_visits`
+In this case, since the code is run directly on the local computer rather than through Docker, the BASE_URL is 127.0.0.1:5153. The port 5153 is specified in the app.py script.
+
+### 6. Deploy the Analytics Application (Dockerize the Application)
+1. create docker file called Dockerfile in the main directory and ensure to include dependencies 
 
 ## Project Instructions
 1. Set up a Postgres database with a Helm Chart
