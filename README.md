@@ -20,22 +20,23 @@ For this project, you are a DevOps engineer who will be collaborating with a tea
 5. GitHub - pull and clone code
 
 ### Setup
-#### 1. Configure a Database
-Set up a Postgres database
 
-1. Setup Database using Kubernetes PV, PVC, deployment and create service.
-2. This should set up a Postgre deployment at `<SERVICE_NAME>-postgresql.default.svc.cluster.local` in your Kubernetes cluster. You can verify it by running `kubectl svc`
+#### 1. Create EKS Cluster, PVC and PV
+Create the EKS Kubernestes cluster using below command:
+1. eksctl create cluster --name suresh-eks-udacity --region us-east-1 --nodegroup-name my-nodes --node-type t3.small --nodes 1 --nodes-min 1 --nodes-max 2
+2. Create the persistant volume and persistant volume claim. 
 
-By default, it will create a username `db`. The password can be retrieved with the following command:
-```bash
-export POSTGRES_PASSWORD=$(kubectl get secret --namespace default <SERVICE_NAME>-postgresql -o jsonpath="{.data.postgres-password}" | base64 -d)
+#### 2. Configure a Database 
+Set up a Postgres database - name: sureshdatabase
 
-echo $POSTGRES_PASSWORD
-```
+1. Setup Database using Kubernetes PV, PVC, deployment and create service. The kubernetes yaml files are available under EKS directory.
+2. Based on the username and password set in the deployement connect with the database using bash into the pod. 
+3.postgresql-service that targets pods with the label app.kubernetes.io/name=postgresql on port 5432, which is the default port for PostgreSQL. Use the posegresql-service.yaml file in the EKS directory.  You can verify it by running `kubectl svc`
+Setup the port fowarding using the command kubectl port-forward service/postgresql-service 5433:5432 & to connect the database locally. 
 
-<sup><sub>* The instructions are adapted from [Bitnami's PostgreSQL Helm Chart](https://artifacthub.io/packages/helm/bitnami/postgresql).</sub></sup>
 
-3. Test Database Connection
+
+#### 3. Test Database Connection
 The database is accessible within the cluster. This means that when you will have some issues connecting to it via your local environment. You can either connect to a pod that has access to the cluster _or_ connect remotely via [`Port Forwarding`](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
 
 * Connecting Via Port Forwarding
@@ -50,15 +51,17 @@ kubectl exec -it <POD_NAME> bash
 PGPASSWORD="<PASSWORD HERE>" psql postgres://postgres@<SERVICE_NAME>:5432/postgres -c <COMMAND_HERE>
 ```
 
-4. Run Seed Files
+#### 4. Run Seed Files to insert sample data provided. 
 We will need to run the seed files in `db/` in order to create the tables and populate them with data.
 
 ```bash
 kubectl port-forward --namespace default svc/<SERVICE_NAME>-postgresql 5432:5432 &
-    PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432 < <FILE_NAME.sql>
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 1_create_tables.sql
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 2_seed_users.sql
+    PGPASSWORD="$DB_PASSWORD" psql --host 127.0.0.1 -U dbuser -d sureshdatabase -p 5433 < 3_seed_tokens.sql
 ```
 
-### 2. Running the Analytics Application Locally
+#### 5. Running the Analytics Application Locally
 In the `analytics/` directory:
 
 1. Install dependencies
