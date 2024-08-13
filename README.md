@@ -103,8 +103,38 @@ The benefit here is that it's explicitly set. However, note that the `DB_PASSWOR
 `curl <BASE_URL>/api/reports/user_visits`
 In this case, since the code is run directly on the local computer rather than through Docker, the BASE_URL is 127.0.0.1:5153. The port 5153 is specified in the app.py script.
 
-### 6. Deploy the Analytics Application (Dockerize the Application)
-1. create docker file called Dockerfile in the main directory and ensure to include dependencies 
+#### 6. Deploy the Analytics Application (Dockerize the Application)
+1. create docker file called Dockerfile in the main directory and ensure to include dependencies, image to build, pip requirements installation.
+2. build and verify the Docker image, run the following command:
+ ```bash
+docker build -t test-coworking-analytics .
+docker run --network="host" test-coworking-analytics
+```
+3. You may use the curl commands mentioned in the Build the Analytics Application Locally page to test your Dockerized app. When correct, you should get the same output as then.
+
+
+#### 7. Set up Continuous Integration with CodeBuild
+The purpose of this step is to provide a systematic approach to pushing the Docker image of the coworking application into Amazon ECR.
+1. First, create an Amazon ECR repository on your AWS console. name: coworking-repo
+2. Then, create an Amazon CodeBuild project that is connected to your project's GitHub repository. name: coworking
+3.  create a buildspec.yaml file that will be triggered whenever the project repository is updated. The buildspec.yaml file is available in the main directory.
+a) pre-build: Set up Docker login with aws ecr get-login-password
+build:
+b) Build the coworking analytics application using docker build
+c) Tag the image with the docker tag command. Automate this process by using the $CODEBUILD_BUILD_NUMBER variable (rather than entering the image tags manually)
+d) post-build: Push the image to your Amazon ECR account with docker push
+4. Verify the build successful and create the image.
+
+#### 8. Build the application with updated image in the ECR
+1. The configmap, deployment and secret yaml files are available in EKS directory. using Kubectl commands, create the configmap, deployment and secret (store DB password)
+2. Using the image which is build using the codebuild and stored in the ECR in the deployment.yaml file.
+3. verify the Deployment
+As a final verification, you may execute the same CURL commands above but change the BASE_URL to the External-IP obtained from this command's output:
+```bash
+kubectl get svc
+'''
+#### 9. Setup CloudWatch Logging
+1. set up CloudWatch logging. In particular, we are going to use its Container Insights feature.
 
 ## Project Instructions
 1. Set up a Postgres database with a Helm Chart
